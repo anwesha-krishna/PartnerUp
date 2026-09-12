@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-pitch: #050505;
+    --cyan-electric: #06b6d4;
+    --purple-neon: #a855f7;
+    --indigo-vibrant: #6366f1;
+  }
+
+  body {
+    background-color: #050505;
+    color: #f1f5f9;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Monospace section tags font styling */
+  .font-mono-tag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Custom Neon & Cyan Glow Accent Utilities */
+.text-cyan-electric {
+  color: #06b6d4;
+}
+
+.text-purple-neon {
+  color: #a855f7;
+}
+
+.bg-cyan-electric {
+  background-color: #06b6d4;
+}
+
+.bg-purple-neon {
+  background-color: #a855f7;
+}
+
+.border-cyan-glow {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+}
+
+.border-purple-glow {
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.15);
+}
+
+.glow-cyan-hover:hover {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.25);
+  border-color: rgba(6, 182, 212, 0.6);
+}
+
+.glow-purple-hover:hover {
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.25);
+  border-color: rgba(168, 85, 247, 0.6);
+}
+
+/* Custom Dark Glassmorphic Card Surface */
+.glass-panel {
+  background: rgba(13, 17, 28, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
