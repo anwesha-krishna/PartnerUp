@@ -41,7 +41,7 @@ export default function Navbar({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-lg tracking-tight text-white">
-                  Project<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-violet-400 to-purple-500">Match</span>
+                  Partner<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-violet-400 to-purple-500">Up</span>
                 </span>
                 <span className="text-[9px] font-mono-tag font-bold uppercase tracking-widest bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full hidden sm:inline-block">
                   v2.0
