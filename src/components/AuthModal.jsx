@@ -18,33 +18,42 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (tab === 'login') {
-      if (!formData.email) {
-        setError('Please enter your email address');
-        return;
+    try {
+      if (tab === 'login') {
+        if (!formData.email) {
+          setError('Please enter your email address');
+          return;
+        }
+        await login(formData.email, formData.password);
+        if (onAuthSuccess) onAuthSuccess('Logged in successfully!');
+        onClose();
+      } else {
+        if (!formData.name || !formData.email) {
+          setError('Please enter your name and email');
+          return;
+        }
+        await signup(formData);
+        if (onAuthSuccess) onAuthSuccess(`Welcome to PartnerUp, ${formData.name}!`);
+        onClose();
       }
-      login(formData.email, formData.password);
-      if (onAuthSuccess) onAuthSuccess('Logged in successfully!');
-      onClose();
-    } else {
-      if (!formData.name || !formData.email) {
-        setError('Please enter your name and email');
-        return;
-      }
-      signup(formData);
-      if (onAuthSuccess) onAuthSuccess(`Welcome to ProjectMatch, ${formData.name}!`);
-      onClose();
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
     }
   };
 
-  const handleQuickDemo = () => {
-    quickDemoLogin();
-    if (onAuthSuccess) onAuthSuccess('Logged in as Anwesha K. (CR / Frontend Lead)');
-    onClose();
+  const handleQuickDemo = async () => {
+    setError('');
+    try {
+      await quickDemoLogin();
+      if (onAuthSuccess) onAuthSuccess('Logged in as Anwesha K. (CR / Frontend Lead)');
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Demo login failed. Please try again.');
+    }
   };
 
   return (

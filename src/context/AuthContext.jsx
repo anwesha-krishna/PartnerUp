@@ -1,145 +1,162 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-import { sanitizeText, sanitizeUrl, isValidEmail } from '../utils/security';
+import { supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext(null);
 
-const STORAGE_KEY = 'project_match_user_v1';
-
-export const DEMO_USER = {
-  id: "user-demo-1",
-  name: "Anwesha K.",
-  email: "anwesha.k@berkeley.edu",
-  role: "Frontend Lead & CR",
-  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-  university: "UC Berkeley",
-  department: "Computer Science & Engineering (CSE)",
-  yearOfStudy: "3rd Year B.Tech",
-  bio: "Passionate frontend engineer, UI/UX craftsman, and Class Representative. Specialized in React, Tailwind CSS, Next.js, and leading agile hackathon sprint squads to victory.",
-  experience: "Advanced",
-  availability: "Weekends",
-  skills: ["React", "TypeScript", "Tailwind CSS", "Next.js", "Figma", "Redux", "UI/UX Design", "GraphQL"],
-  languages: ["English", "Hindi", "Bengali", "Spanish"],
-  socials: {
-    github: "https://github.com/anweshak",
-    linkedin: "https://linkedin.com/in/anweshak",
-    portfolio: "https://anweshak.dev"
-  },
-  rating: 5.0,
-  ratingCount: 18,
-  verifiedCertificates: [
-    { id: "cert-1", title: "CalHacks 11.0 — 1st Place Track Winner", issuer: "CalHacks Foundation", date: "Nov 2025", verified: true },
-    { id: "cert-2", title: "HackMIT 2025 Finalist — Best UX Award", issuer: "MIT Tech Club", date: "Sep 2025", verified: true },
-    { id: "cert-3", title: "AWS Certified Cloud Practitioner", issuer: "Amazon Web Services", date: "Jan 2026", verified: true }
-  ],
-  peerEndorsements: [
-    { id: "e1", tag: "⚡ Fast Shipper", count: 14 },
-    { id: "e2", tag: "🎨 Pixel Perfect UI", count: 18 },
-    { id: "e3", tag: "🤖 AI Prompt Master", count: 9 },
-    { id: "e4", tag: "🏆 Hackathon Veteran", count: 12 },
-    { id: "e5", tag: "🤝 Inspiring Team Lead", count: 11 }
-  ]
-};
+const DEMO_EMAIL = 'demo@partnerup.app';
+const DEMO_PASSWORD = 'PartnerUpDemo2026!';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      // ignore
-    }
-    // Default to demo user for instant smooth experience
-    return DEMO_USER;
-  });
-
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Sync to localStorage
-  useEffect(() => {
-    try {
-      if (user) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    } catch (e) {
-      // storage unavailable
+  const loadUserProfile = async (authUser) => {
+    if (!authUser) {
+      setUser(null);
+      return;
     }
-  }, [user]);
 
-  // Login handler
-  const login = (email, password) => {
-    const cleanEmail = sanitizeText(email);
-    const loggedInUser = {
-      ...DEMO_USER,
-      email: isValidEmail(cleanEmail) ? cleanEmail : DEMO_USER.email,
-      name: cleanEmail ? sanitizeText(cleanEmail.split('@')[0]) : DEMO_USER.name
-    };
-    setUser(loggedInUser);
-    setIsAuthModalOpen(false);
-    return loggedInUser;
+    let { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (!profile) {
+      const { data: newProfile, error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authUser.id,
+          name: authUser.email.split('@')[0],
+          role: 'Member',
+          skills: ['React', 'JavaScript'],
+          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.email.split('@')[0])}&background=6366f1&color=fff&bold=true`,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.warn('Could not create profile:', insertError.message);
+      } else {
+        profile = newProfile;
+      }
+    }
+
+    setUser({
+      id: authUser.id,
+      email: authUser.email,
+      name: profile?.name || authUser.email.split('@')[0],
+      role: profile?.role || 'Member',
+      university: profile?.university || '',
+      department: profile?.department || '',
+      yearOfStudy: profile?.year_of_study || '3rd Year B.Tech',
+      bio: profile?.bio || '',
+      skills: profile?.skills || [],
+      languages: profile?.languages || ['English'],
+      availability: profile?.availability || 'Weekends',
+      experience: profile?.experience || 'Advanced',
+      avatarUrl: profile?.avatar_url || '',
+      socials: profile?.socials || {},
+      verifiedCertificates: profile?.verified_certificates || [],
+      peerEndorsements: profile?.peer_endorsements || [],
+    });
   };
 
-  // Sign up handler
-  const signup = (userData = {}) => {
-    const cleanName = sanitizeText(userData.name || 'New Member');
-    const cleanEmail = sanitizeText(userData.email);
-    const newUser = {
-      ...DEMO_USER,
-      id: `user-${Date.now()}`,
-      name: cleanName,
-      email: isValidEmail(cleanEmail) ? cleanEmail : 'user@hackathon.edu',
-      role: sanitizeText(userData.role || 'Full-Stack Developer'),
-      department: sanitizeText(userData.department || 'Computer Science & Engineering'),
-      skills: Array.isArray(userData.skills) ? userData.skills.map(sanitizeText) : ['React', 'JavaScript'],
-      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=6366f1&color=fff&bold=true`
-    };
-    setUser(newUser);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadUserProfile(session?.user ?? null).finally(() => setLoading(false));
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadUserProfile(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const login = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
     setIsAuthModalOpen(false);
-    return newUser;
+    return data.user;
   };
 
-  // 1-Click Quick Demo Login
-  const quickDemoLogin = () => {
-    setUser(DEMO_USER);
+  const signup = async ({ name, email, password, department, role }) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+
+    if (data.user) {
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        name,
+        department,
+        role,
+        skills: ['React', 'JavaScript'],
+        avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff&bold=true`,
+      });
+      if (profileError) console.warn('Profile creation failed:', profileError.message);
+    }
+
     setIsAuthModalOpen(false);
-    return DEMO_USER;
+    return data.user;
   };
 
-  // Logout handler
-  const logout = () => {
+  const quickDemoLogin = async () => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: DEMO_EMAIL,
+      password: DEMO_PASSWORD,
+    });
+    if (error) throw new Error(error.message);
+    setIsAuthModalOpen(false);
+    return data.user;
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
-  // Update profile and optionally sync to backend
   const updateProfile = async (updatedData) => {
-    const merged = { ...user, ...updatedData };
-    setUser(merged);
+    if (!user) return;
 
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(merged)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.profile) {
-          setUser(data.profile);
-        }
-      }
-    } catch (err) {
-      console.warn('Backend profile sync failed, saved locally:', err.message);
-    }
+    const payload = {
+      name: updatedData.name,
+      role: updatedData.role,
+      university: updatedData.university,
+      department: updatedData.department,
+      year_of_study: updatedData.yearOfStudy,
+      bio: updatedData.bio,
+      skills: updatedData.skills,
+      languages: updatedData.languages,
+      availability: updatedData.availability,
+      experience: updatedData.experience,
+      socials: updatedData.socials,
+      verified_certificates: updatedData.verifiedCertificates,
+      peer_endorsements: updatedData.peerEndorsements,
+    };
 
-    return merged;
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    setUser((prev) => ({
+      ...prev,
+      ...updatedData,
+    }));
+    return data;
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        loading,
         isAuthModalOpen,
         openAuthModal: () => setIsAuthModalOpen(true),
         closeAuthModal: () => setIsAuthModalOpen(false),
@@ -147,7 +164,7 @@ export function AuthProvider({ children }) {
         signup,
         quickDemoLogin,
         logout,
-        updateProfile
+        updateProfile,
       }}
     >
       {children}
